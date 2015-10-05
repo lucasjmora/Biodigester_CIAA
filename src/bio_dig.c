@@ -89,6 +89,8 @@ static int32_t fd_adc;
  */
 static int32_t fd_dac;
 
+static int32_t fd_out;
+
 
 /*==================[external data definition]===============================*/
 
@@ -149,11 +151,14 @@ TASK(InitTask)
    /* init the ciaa kernel */
    ciaak_start();
 
+   /* open CIAA digital outputs */
+   fd_out = ciaaPOSIX_open("/dev/dio/out/0", ciaaPOSIX_O_RDWR);
+   
    /* open CIAA ADC */
    fd_adc = ciaaPOSIX_open("/dev/serial/aio/in/0", ciaaPOSIX_O_RDONLY);
    ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, 100000);
    ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, ciaaCHANNEL_3);
-
+   
    /* open CIAA DAC */
    fd_dac = ciaaPOSIX_open("/dev/serial/aio/out/0", ciaaPOSIX_O_WRONLY);
    ciaaPOSIX_ioctl(fd_dac, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, 100000);
@@ -168,12 +173,27 @@ TASK(InitTask)
 TASK(Analogic)
 {
    uint16_t hr_ciaaDac;
-
+   uint8_t outputs;
    /* Read ADC. */
    ciaaPOSIX_read(fd_adc, &hr_ciaaDac, sizeof(hr_ciaaDac));
 
    /* Signal gain. */
    hr_ciaaDac >>= 0;
+
+   /* add in conditional previous led status check */
+   /* led on if adc input > 2V */
+   if (hr_ciaaDac > 621)
+   {
+      ciaaPOSIX_read(fd_out, &outputs, 1);
+      outputs |= 0x20;
+      ciaaPOSIX_write(fd_out, &outputs, 1);
+   }
+   else /* led off if adc input < 2V */
+   {
+      ciaaPOSIX_read(fd_out, &outputs, 1);
+      outputs &= 0xDF;
+      ciaaPOSIX_write(fd_out, &outputs, 1);
+   }
 
    /* Write DAC */
    ciaaPOSIX_write(fd_dac, &hr_ciaaDac, sizeof(hr_ciaaDac));
