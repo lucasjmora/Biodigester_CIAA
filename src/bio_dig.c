@@ -71,9 +71,17 @@
 
 /*==================[macros and definitions]=================================*/
 
+#define  HIGH_LIM    800
+#define  LOWER_LIM   300 
+#define  HIGH_ALARM_OUT    5  /* Led 3 */
+#define  LOWER_ALARM_OUT   4  /* Led 2 */
 /*==================[internal data declaration]==============================*/
 
 /*==================[internal functions declaration]=========================*/
+
+uint8_t OutputPinStatus(int32_t *,uint8_t);
+void OutpuPinClear(int32_t *,uint8_t);
+void OutpuPinSet(int32_t *,uint8_t);
 
 /*==================[internal data definition]===============================*/
 
@@ -96,6 +104,41 @@ static int32_t fd_out;
 
 /*==================[internal functions definition]==========================*/
 
+uint8_t OutputPinStatus(int32_t *fildes_out,uint8_t pin_to_test)
+{
+   /* TODO: implement pin_to_test 0...7 validation check */
+   uint8_t one_in_pin = 1;
+   uint8_t output_port_status;
+   
+   one_in_pin <<= pin_to_test;
+   ciaaPOSIX_read(*fildes_out, &output_port_status, 1);
+   output_port_status &= one_in_pin;
+   return output_port_status;
+}
+
+void OutpuPinClear(int32_t *fildes_out,uint8_t pin_to_clear)
+{
+   /* TODO: implement pin_to_test 0...7 validation check */
+   uint8_t one_in_pin = 1;
+   uint8_t output_port;
+   
+   one_in_pin <<= pin_to_clear;
+   ciaaPOSIX_read(*fildes_out, &output_port, 1);
+   output_port &= ~one_in_pin;
+   ciaaPOSIX_write(fd_out, &output_port, 1);
+}
+
+void OutpuPinSet(int32_t *fildes_out,uint8_t pin_to_set)
+{
+   /* TODO: implement pin_to_test 0...7 validation check */
+   uint8_t one_in_pin = 1;
+   uint8_t output_port;
+   
+   one_in_pin <<= pin_to_set;
+   ciaaPOSIX_read(*fildes_out, &output_port, 1);
+   output_port |= one_in_pin;
+   ciaaPOSIX_write(fd_out, &output_port, 1);
+}
 /*==================[external functions definition]==========================*/
 /** \brief Main function
  *
@@ -172,35 +215,55 @@ TASK(InitTask)
 
 TASK(Analogic)
 {
+/*************************************/
+/* According to oneVar_twoAlarms.odg */
+/*************************************/
+
    uint16_t hr_ciaaDac;
    uint8_t outputs;
+   uint8_t alarm_high_status;
+   uint8_t alarm_lower_status;
+   
    /* Read ADC. */
    ciaaPOSIX_read(fd_adc, &hr_ciaaDac, sizeof(hr_ciaaDac));
 
    /* Signal gain. */
    hr_ciaaDac >>= 0;
 
-   /* add in conditional previous led status check */
-   /* led on if adc input > 2V */
-   if (hr_ciaaDac > 621)
-   {
-      ciaaPOSIX_read(fd_out, &outputs, 1);
-      outputs |= 0x20;
-      ciaaPOSIX_write(fd_out, &outputs, 1);
-   }
-   else /* led off if adc input < 2V */
-   {
-      ciaaPOSIX_read(fd_out, &outputs, 1);
-      outputs &= 0xDF;
-      ciaaPOSIX_write(fd_out, &outputs, 1);
-   }
+   /* read alarms status*/
+   alarm_high_status = OutputPinStatus(&fd_out,HIGH_ALARM_OUT);
+   alarm_lower_status = OutputPinStatus(&fd_out,LOWER_ALARM_OUT);
 
+   if (hr_ciaaDac < HIGH_LIM && hr_ciaaDac > LOWER_LIM)
+   {
+      if (alarm_lower_status || alarm_high_status)   
+      {
+         OutpuPinClear(&fd_out,HIGH_ALARM_OUT);
+         OutpuPinClear(&fd_out,LOWER_ALARM_OUT);
+      }
+   }
+   else if (hr_ciaaDac > HIGH_LIM)
+   {
+      if (!alarm_high_status)
+         OutpuPinSet(&fd_out,HIGH_ALARM_OUT);
+   }
+   else if (hr_ciaaDac < LOWER_LIM)
+   {
+      if (!alarm_lower_status)
+         OutpuPinSet(&fd_out,LOWER_ALARM_OUT);
+   }
+   else
+   {
+      /* ERROR */
+   }
+   
    /* Write DAC */
    ciaaPOSIX_write(fd_dac, &hr_ciaaDac, sizeof(hr_ciaaDac));
 
    /* end of Blinking */
    TerminateTask();
 }
+
 
 /** @} doxygen end group definition */
 /** @} doxygen end group definition */
