@@ -52,7 +52,7 @@
  * MaCe         Mariano Cerdeiro
  * GMuro        Gustavo Muro
  * PR           Pablo Ridolfi
- * JuCe         Juan Cecconi
+ * JCe         Juan Cecconi
  *
  */
 
