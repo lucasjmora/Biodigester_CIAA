@@ -68,14 +68,15 @@
 #include "ciaaPOSIX_stdlib.h"
 #include "ciaaPOSIX_string.h" /* <= string header */
 #include "ciaak.h"            /* <= ciaa kernel header */
-#include "bio_dig.h"
+#include "dio_relay.h"
 
 /*==================[macros and definitions]=================================*/
 
-#define  HIGH_LIM    800
-#define  LOWER_LIM   300 
-#define  HIGH_ALARM_OUT    5  /* Led 3 */
-#define  LOWER_ALARM_OUT   4  /* Led 2 */
+/* high or higher or ??? */
+#define  HIGH_LIM_TEMP    800
+#define  LOWER_LIM_TEMP   300 
+#define  HIGH_ALARM_TEMP    RELAY_1
+#define  LOWER_ALARM_TEMP   RELAY_2
 /*==================[internal data declaration]==============================*/
 
 /*==================[internal functions declaration]=========================*/
@@ -97,7 +98,7 @@ static int32_t fd_adc;
  *
  * Device path /dev/serial/aio/out/0
  */
-static int32_t fd_dac;
+//static int32_t fd_dac;
 
 /** \brief File descriptor for digital output ports
  *
@@ -109,12 +110,13 @@ static int32_t fd_out;
  *
  * Device path /dev/serial/uart/1
  */
-static int32_t fd_uart1;
+//static int32_t fd_uart1;
 
 /*==================[external data definition]===============================*/
 
 /*==================[internal functions definition]==========================*/
 
+/*
 void int16ToString(int16_t int16_to_string, char *output_string)
 {
    //uint32_t uint32_to_string = (uint32_t) float_to_string;
@@ -157,48 +159,13 @@ void int16ToString(int16_t int16_to_string, char *output_string)
       else if (get_nibble == 0xF)
          *(output_string + loopi) = 'F';      
     //  else
-         /* ERROR */
+         // ERROR 
       // in C can not shift a float, only a int !!!
       int16_to_string >>= 4;
    }
 }
+*/
 
-
-uint8_t OutputPinStatus(int32_t *fildes_out,uint8_t pin_to_test)
-{
-   /* TODO: implement pin_to_test 0...7 validation check */
-   uint8_t one_in_pin = 1;
-   uint8_t output_port_status;
-   
-   one_in_pin <<= pin_to_test;
-   ciaaPOSIX_read(*fildes_out, &output_port_status, 1);
-   output_port_status &= one_in_pin;
-   return output_port_status;
-}
-
-void OutpuPinClear(int32_t *fildes_out,uint8_t pin_to_clear)
-{
-   /* TODO: implement pin_to_test 0...7 validation check */
-   uint8_t one_in_pin = 1;
-   uint8_t output_port;
-   
-   one_in_pin <<= pin_to_clear;
-   ciaaPOSIX_read(*fildes_out, &output_port, 1);
-   output_port &= ~one_in_pin;
-   ciaaPOSIX_write(fd_out, &output_port, 1);
-}
-
-void OutpuPinSet(int32_t *fildes_out,uint8_t pin_to_set)
-{
-   /* TODO: implement pin_to_test 0...7 validation check */
-   uint8_t one_in_pin = 1;
-   uint8_t output_port;
-   
-   one_in_pin <<= pin_to_set;
-   ciaaPOSIX_read(*fildes_out, &output_port, 1);
-   output_port |= one_in_pin;
-   ciaaPOSIX_write(fd_out, &output_port, 1);
-}
 /*==================[external functions definition]==========================*/
 /** \brief Main function
  *
@@ -263,17 +230,17 @@ TASK(InitTask)
    ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, ciaaCHANNEL_3);
    
    /* open CIAA DAC */
-   fd_dac = ciaaPOSIX_open("/dev/serial/aio/out/0", ciaaPOSIX_O_WRONLY);
-   ciaaPOSIX_ioctl(fd_dac, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, 100000);
+//   fd_dac = ciaaPOSIX_open("/dev/serial/aio/out/0", ciaaPOSIX_O_WRONLY);
+  // ciaaPOSIX_ioctl(fd_dac, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, 100000);
 
    /* open UART connected to USB bridge (FT2232) */
-   fd_uart1 = ciaaPOSIX_open("/dev/serial/uart/1", ciaaPOSIX_O_RDWR);
+ //  fd_uart1 = ciaaPOSIX_open("/dev/serial/uart/1", ciaaPOSIX_O_RDWR);
 
    /* change baud rate for uart usb */
-   ciaaPOSIX_ioctl(fd_uart1, ciaaPOSIX_IOCTL_SET_BAUDRATE, (void *)ciaaBAUDRATE_115200);
+//   ciaaPOSIX_ioctl(fd_uart1, ciaaPOSIX_IOCTL_SET_BAUDRATE, (void *)ciaaBAUDRATE_115200);
 
    /* change FIFO TRIGGER LEVEL for uart usb */
-   ciaaPOSIX_ioctl(fd_uart1, ciaaPOSIX_IOCTL_SET_FIFO_TRIGGER_LEVEL, (void *)ciaaFIFO_TRIGGER_LEVEL3);
+//   ciaaPOSIX_ioctl(fd_uart1, ciaaPOSIX_IOCTL_SET_FIFO_TRIGGER_LEVEL, (void *)ciaaFIFO_TRIGGER_LEVEL3);
 
    /* Activates the ModbusSlave task */
    ActivateTask(Analogic);
@@ -289,13 +256,13 @@ TASK(Analogic)
 /*************************************/
 
    uint16_t hr_ciaaDac;
-   uint8_t outputs;
+//   uint8_t outputs;
    uint8_t alarm_high_status;
    uint8_t alarm_lower_status;
-   int16_t temp;
-   char packet[5]; 
+ //  int16_t temp;
+//   char packet[5]; 
 
-   int8_t message = 2; 
+//   int8_t message = 2; 
    //uint8_t buf[20];
    //int32_t ret = 0;
    /* Read ADC. */
@@ -303,47 +270,47 @@ TASK(Analogic)
 
 
    /* read alarms status*/
-   alarm_high_status = OutputPinStatus(&fd_out,HIGH_ALARM_OUT);
-   alarm_lower_status = OutputPinStatus(&fd_out,LOWER_ALARM_OUT);
+   alarm_high_status = ciaaDIO_relay_st(fd_out, HIGH_ALARM_TEMP);
+   alarm_lower_status = ciaaDIO_relay_st(fd_out, LOWER_ALARM_TEMP);
 
-   if (hr_ciaaDac < HIGH_LIM && hr_ciaaDac > LOWER_LIM)
+   if (hr_ciaaDac < HIGH_LIM_TEMP && hr_ciaaDac > LOWER_LIM_TEMP)
    {
       if (alarm_lower_status || alarm_high_status)   
       {
-         OutpuPinClear(&fd_out,HIGH_ALARM_OUT);
-         OutpuPinClear(&fd_out,LOWER_ALARM_OUT);
+         ciaaDIO_relay_op(fd_out, HIGH_ALARM_TEMP, OFF);
+         ciaaDIO_relay_op(fd_out, LOWER_ALARM_TEMP, OFF);
       }
    }
-   else if (hr_ciaaDac > HIGH_LIM)
+   else if (hr_ciaaDac > HIGH_LIM_TEMP)
    {
       if (!alarm_high_status)
       {
-         OutpuPinSet(&fd_out,HIGH_ALARM_OUT);
-         ciaaPOSIX_write(fd_uart1, message, sizeof(message));
+         ciaaDIO_relay_op(fd_out, HIGH_ALARM_TEMP, ON);
+//         ciaaPOSIX_write(fd_uart1, message, sizeof(message));
 //         ciaaPOSIX_write(fd_uart1, &hr_ciaaDac, sizeof(hr_ciaaDac));
       }
    }
-   else if (hr_ciaaDac < LOWER_LIM)
+   else if (hr_ciaaDac < LOWER_LIM_TEMP)
    {
       if (!alarm_lower_status)
-         OutpuPinSet(&fd_out,LOWER_ALARM_OUT);
+         ciaaDIO_relay_op(fd_out, LOWER_ALARM_TEMP, ON);
    }
-   else
-   {
+  // else
+  // {
       /* ERROR */
-   }
+  // }
    
    /* Write DAC */
-   ciaaPOSIX_write(fd_dac, &hr_ciaaDac, sizeof(hr_ciaaDac));
+//   ciaaPOSIX_write(fd_dac, &hr_ciaaDac, sizeof(hr_ciaaDac));
    
    /* send adc read value to uart on usb bridge (ft2232) */
       
    /* Signal gain. */
-   temp = hr_ciaaDac * 150 / 1024;
-   int16ToString(temp, packet);   
-   packet[4] = '\n';
+ //  temp = hr_ciaaDac * 150 / 1024;
+ //  int16ToString(temp, packet);   
+ //  packet[4] = '\0';
    //ciaaPOSIX_printf("%s %i\n",packet,temp);
-   ciaaPOSIX_write(fd_uart1, packet, ciaaPOSIX_strlen(packet));
+ //  ciaaPOSIX_write(fd_uart1, packet, ciaaPOSIX_strlen(packet));
    
    /* end of Blinking */
    TerminateTask();
