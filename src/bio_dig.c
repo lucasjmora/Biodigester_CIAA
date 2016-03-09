@@ -73,10 +73,10 @@
 /*==================[macros and definitions]=================================*/
 
 /* high or higher or ??? */
-#define  HIGH_LIM_TEMP    800
-#define  LOWER_LIM_TEMP   300 
-#define  HIGH_ALARM_TEMP    RELAY_1
-#define  LOWER_ALARM_TEMP   RELAY_2
+#define  HIGH_LIM_ANAI0    800
+#define  LOWER_LIM_ANAI0   300 
+#define  HIGH_ALARM_ANAI0    RELAY_1
+#define  LOWER_ALARM_ANAI0   RELAY_2
 /*==================[internal data declaration]==============================*/
 
 /*==================[internal functions declaration]=========================*/
@@ -94,77 +94,15 @@ void OutpuPinSet(int32_t *,uint8_t);
  */
 static int32_t fd_adc;
 
-/** \brief File descriptor for DAC
- *
- * Device path /dev/serial/aio/out/0
- */
-//static int32_t fd_dac;
-
 /** \brief File descriptor for digital output ports
  *
  * Device path /dev/dio/out/0
  */
 static int32_t fd_out;
 
-/** \brief File descriptor of the USB uart
- *
- * Device path /dev/serial/uart/1
- */
-//static int32_t fd_uart1;
-
 /*==================[external data definition]===============================*/
 
 /*==================[internal functions definition]==========================*/
-
-/*
-void int16ToString(int16_t int16_to_string, char *output_string)
-{
-   //uint32_t uint32_to_string = (uint32_t) float_to_string;
-   int8_t loopi;
-   uint8_t get_nibble;
-   //uint8_t *array_byte = (uint8_t*) &float_to_string;  
-   for (loopi = 3; loopi >= 0; loopi--)
-   {
-      get_nibble = int16_to_string & 0xF;
-      if (get_nibble == 0x0)
-         *(output_string + loopi) = '0';      
-      else if (get_nibble == 0x1)
-         *(output_string + loopi) = '1';      
-      else if (get_nibble == 0x2)
-         *(output_string + loopi) = '2';      
-      else if (get_nibble == 0x3)
-         *(output_string + loopi) = '3';      
-      else if (get_nibble == 0x4)
-         *(output_string + loopi) = '4';      
-      else if (get_nibble == 0x5)
-         *(output_string + loopi) = '5';      
-      else if (get_nibble == 0x6)
-         *(output_string + loopi) = '6';      
-      else if (get_nibble == 0x7)
-         *(output_string + loopi) = '7';      
-      else if (get_nibble == 0x8)
-         *(output_string + loopi) = '8';      
-      else if (get_nibble == 0x9)
-         *(output_string + loopi) = '9';      
-      else if (get_nibble == 0xA)
-         *(output_string + loopi) = 'A';      
-      else if (get_nibble == 0xB)
-         *(output_string + loopi) = 'B';      
-      else if (get_nibble == 0xC)
-         *(output_string + loopi) = 'C';      
-      else if (get_nibble == 0xD)
-         *(output_string + loopi) = 'D';      
-      else if (get_nibble == 0xE)
-         *(output_string + loopi) = 'E';      
-      else if (get_nibble == 0xF)
-         *(output_string + loopi) = 'F';      
-    //  else
-         // ERROR 
-      // in C can not shift a float, only a int !!!
-      int16_to_string >>= 4;
-   }
-}
-*/
 
 /*==================[external functions definition]==========================*/
 /** \brief Main function
@@ -229,22 +167,9 @@ TASK(InitTask)
    ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, 100000);
    ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, ciaaCHANNEL_3);
    
-   /* open CIAA DAC */
-//   fd_dac = ciaaPOSIX_open("/dev/serial/aio/out/0", ciaaPOSIX_O_WRONLY);
-  // ciaaPOSIX_ioctl(fd_dac, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, 100000);
-
-   /* open UART connected to USB bridge (FT2232) */
- //  fd_uart1 = ciaaPOSIX_open("/dev/serial/uart/1", ciaaPOSIX_O_RDWR);
-
-   /* change baud rate for uart usb */
-//   ciaaPOSIX_ioctl(fd_uart1, ciaaPOSIX_IOCTL_SET_BAUDRATE, (void *)ciaaBAUDRATE_115200);
-
-   /* change FIFO TRIGGER LEVEL for uart usb */
-//   ciaaPOSIX_ioctl(fd_uart1, ciaaPOSIX_IOCTL_SET_FIFO_TRIGGER_LEVEL, (void *)ciaaFIFO_TRIGGER_LEVEL3);
-
-   /* Activates the ModbusSlave task */
+   /* Activates the Slave task */
+   /* Conflict with Analogic Alarm????? */
    ActivateTask(Analogic);
-
    /* end InitTask */
    TerminateTask();
 }
@@ -255,62 +180,46 @@ TASK(Analogic)
 /* According to oneVar_twoAlarms.odg */
 /*************************************/
 
-   uint16_t hr_ciaaDac;
-//   uint8_t outputs;
-   uint8_t alarm_high_status;
-   uint8_t alarm_lower_status;
- //  int16_t temp;
-//   char packet[5]; 
-
-//   int8_t message = 2; 
-   //uint8_t buf[20];
-   //int32_t ret = 0;
+   uint16_t anaI0_rv;                  /* analog input 0 read value */
+   uint8_t alarm_high_st;              /* high alarm status (1:ON 0:OFF) */
+   uint8_t alarm_lower_st;             /* lower alarm status (1:ON 0:OFF) */
+   
    /* Read ADC. */
-   ciaaPOSIX_read(fd_adc, &hr_ciaaDac, sizeof(hr_ciaaDac));
+   ciaaPOSIX_read(fd_adc, &anaI0_rv, sizeof(anaI0_rv));
 
 
    /* read alarms status*/
-   alarm_high_status = ciaaDIO_relay_st(fd_out, HIGH_ALARM_TEMP);
-   alarm_lower_status = ciaaDIO_relay_st(fd_out, LOWER_ALARM_TEMP);
+   alarm_high_st = ciaaDIO_relay_st(fd_out, HIGH_ALARM_ANAI0);
+   alarm_lower_st = ciaaDIO_relay_st(fd_out, LOWER_ALARM_ANAI0);
 
-   if (hr_ciaaDac < HIGH_LIM_TEMP && hr_ciaaDac > LOWER_LIM_TEMP)
+   /* read value inside of allow range */
+   if (anaI0_rv < HIGH_LIM_ANAI0 && anaI0_rv > LOWER_LIM_ANAI0)
    {
-      if (alarm_lower_status || alarm_high_status)   
+      /* clear alarms if it was ON */
+      if (alarm_lower_st || alarm_high_st)   
       {
-         ciaaDIO_relay_op(fd_out, HIGH_ALARM_TEMP, OFF);
-         ciaaDIO_relay_op(fd_out, LOWER_ALARM_TEMP, OFF);
+         ciaaDIO_relay_op(fd_out, HIGH_ALARM_ANAI0, OFF);
+         ciaaDIO_relay_op(fd_out, LOWER_ALARM_ANAI0, OFF);
       }
    }
-   else if (hr_ciaaDac > HIGH_LIM_TEMP)
+   /* read value over high limit */
+   else if (anaI0_rv > HIGH_LIM_ANAI0)
    {
-      if (!alarm_high_status)
+      if (!alarm_high_st)
       {
-         ciaaDIO_relay_op(fd_out, HIGH_ALARM_TEMP, ON);
-//         ciaaPOSIX_write(fd_uart1, message, sizeof(message));
-//         ciaaPOSIX_write(fd_uart1, &hr_ciaaDac, sizeof(hr_ciaaDac));
+         ciaaDIO_relay_op(fd_out, HIGH_ALARM_ANAI0, ON);
       }
    }
-   else if (hr_ciaaDac < LOWER_LIM_TEMP)
+   /* read value under lower limit */
+   else if (anaI0_rv < LOWER_LIM_ANAI0)
    {
-      if (!alarm_lower_status)
-         ciaaDIO_relay_op(fd_out, LOWER_ALARM_TEMP, ON);
+      if (!alarm_lower_st)
+         ciaaDIO_relay_op(fd_out, LOWER_ALARM_ANAI0, ON);
    }
   // else
   // {
       /* ERROR */
   // }
-   
-   /* Write DAC */
-//   ciaaPOSIX_write(fd_dac, &hr_ciaaDac, sizeof(hr_ciaaDac));
-   
-   /* send adc read value to uart on usb bridge (ft2232) */
-      
-   /* Signal gain. */
- //  temp = hr_ciaaDac * 150 / 1024;
- //  int16ToString(temp, packet);   
- //  packet[4] = '\0';
-   //ciaaPOSIX_printf("%s %i\n",packet,temp);
- //  ciaaPOSIX_write(fd_uart1, packet, ciaaPOSIX_strlen(packet));
    
    /* end of Blinking */
    TerminateTask();
