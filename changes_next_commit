@@ -1,4 +1,0 @@
-* change variable hr_ciaaDac x anaI0_rv (analog input 0 read value) 
-* clean code: remove unused variable and code regards to uart funcion and anaOutput
-* added comments
-* change name variables *TEMP x *ANA0 
