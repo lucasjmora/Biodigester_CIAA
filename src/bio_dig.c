@@ -69,14 +69,16 @@
 #include "ciaaPOSIX_string.h" /* <= string header */
 #include "ciaak.h"            /* <= ciaa kernel header */
 #include "dio_relay.h"
+#include "bio_Cfg.h"
 
 /*==================[macros and definitions]=================================*/
 
-/* high or higher or ??? */
-#define  HIGH_LIM_ANAI0    800
-#define  LOWER_LIM_ANAI0   300 
-#define  HIGH_ALARM_ANAI0    RELAY_1
-#define  LOWER_ALARM_ANAI0   RELAY_2
+//#define  HIGH_LIM_ANAI0    ANA3_HIGH_LIM_LEVEL
+//#define  LOW_LIM_ANAI0     ANA3_LOW_LIM_LEVEL  
+//#define  HIGH_LIM_ANAI0    800
+//#define  LOW_LIM_ANAI0   300 
+//#define  HIGH_ALARM_ANAI0    RELAY_1
+//#define  LOW_ALARM_ANAI0   RELAY_2
 /*==================[internal data declaration]==============================*/
 
 /*==================[internal functions declaration]=========================*/
@@ -99,6 +101,9 @@ static int32_t fd_adc;
  * Device path /dev/dio/out/0
  */
 static int32_t fd_out;
+
+uint16_t ana3_high_lim;
+uint16_t ana3_low_lim;
 
 /*==================[external data definition]===============================*/
 
@@ -164,9 +169,14 @@ TASK(InitTask)
    
    /* open CIAA ADC */
    fd_adc = ciaaPOSIX_open("/dev/serial/aio/in/0", ciaaPOSIX_O_RDONLY);
-   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, 100000);
-   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, ciaaCHANNEL_3);
+   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, (void *)100000);
+  // ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, ciaaCHANNEL_3);
    
+   ana3_high_lim = (uint16_t)ANA3_HIGH_LIM_LEVEL;//800; 
+   ana3_low_lim = (uint16_t)ANA3_LOW_LIM_LEVEL;//300;
+
+   ciaaPOSIX_printf("ana3_high_lim:%u\n", ana3_high_lim);
+   ciaaPOSIX_printf("ana3_low_lim:%u\n", ana3_low_lim);
    /* Activates the Slave task */
    /* Conflict with Analogic Alarm????? */
    ActivateTask(Analogic);
@@ -176,45 +186,46 @@ TASK(InitTask)
 
 TASK(Analogic)
 {
+   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, (void *)ciaaCHANNEL_3);
 /*************************************/
 /* According to oneVar_twoAlarms.odg */
 /*************************************/
 
-   uint16_t anaI0_rv;                  /* analog input 0 read value */
-   uint8_t alarm_high_st;              /* high alarm status (1:ON 0:OFF) */
-   uint8_t alarm_lower_st;             /* lower alarm status (1:ON 0:OFF) */
+   uint16_t anaI0_hr;                  /* analog input0 read value */
+   bool alarm_high_st;              /* high alarm status (1:ON 0:OFF) */
+   bool alarm_lower_st;             /* lower alarm status (1:ON 0:OFF) */
    
    /* Read ADC. */
-   ciaaPOSIX_read(fd_adc, &anaI0_rv, sizeof(anaI0_rv));
+   ciaaPOSIX_read(fd_adc, &anaI0_hr, sizeof(anaI0_hr));
 
 
-   /* read alarms status*/
-   alarm_high_st = ciaaDIO_relay_st(fd_out, HIGH_ALARM_ANAI0);
-   alarm_lower_st = ciaaDIO_relay_st(fd_out, LOWER_ALARM_ANAI0);
+   /* get alarms status*/
+   alarm_high_st = ciaaDIO_relay_st(fd_out, ANA3_HIGH_ALARM_RELAY);
+   alarm_lower_st = ciaaDIO_relay_st(fd_out, ANA3_LOW_ALARM_RELAY);
 
    /* read value inside of allow range */
-   if (anaI0_rv < HIGH_LIM_ANAI0 && anaI0_rv > LOWER_LIM_ANAI0)
+   if (anaI0_hr < ana3_high_lim && anaI0_hr > ana3_low_lim)
    {
       /* clear alarms if it was ON */
       if (alarm_lower_st || alarm_high_st)   
       {
-         ciaaDIO_relay_op(fd_out, HIGH_ALARM_ANAI0, OFF);
-         ciaaDIO_relay_op(fd_out, LOWER_ALARM_ANAI0, OFF);
+         ciaaDIO_relay_op(fd_out, ANA3_HIGH_ALARM_RELAY, OFF);
+         ciaaDIO_relay_op(fd_out, ANA3_LOW_ALARM_RELAY, OFF);
       }
    }
    /* read value over high limit */
-   else if (anaI0_rv > HIGH_LIM_ANAI0)
+   else if (anaI0_hr > ana3_high_lim)
    {
       if (!alarm_high_st)
       {
-         ciaaDIO_relay_op(fd_out, HIGH_ALARM_ANAI0, ON);
+         ciaaDIO_relay_op(fd_out, ANA3_HIGH_ALARM_RELAY, ON);
       }
    }
    /* read value under lower limit */
-   else if (anaI0_rv < LOWER_LIM_ANAI0)
+   else if (anaI0_hr < ana3_low_lim)
    {
       if (!alarm_lower_st)
-         ciaaDIO_relay_op(fd_out, LOWER_ALARM_ANAI0, ON);
+         ciaaDIO_relay_op(fd_out, ANA3_LOW_ALARM_RELAY, ON);
    }
   // else
   // {

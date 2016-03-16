@@ -70,16 +70,16 @@ extern "C" {
 #define  OFF   false
 #define  ERR   -1
 #if (ciaa_nxp == BOARD)
-#define RELAY_1   4  
+#define RELAY_1   4 /* verificar */ 
 #define RELAY_2   5  
 #define RELAY_3   6  
 #define RELAY_4   7  
-#elif (edu_ciaa_nxp == BOARD)
+#elif (edu_ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
 /* edu_ciaa section */
-#define RELAY_1   3  /* LED 1 on edu-ciaa-nxp */  
-#define RELAY_2   4  /* LED 2 on edu-ciaa-nxp */  
-#define RELAY_3   5  /* LED 3 on edu-ciaa-nxp */  
-#define RELAY_4   7  /* LED RED on edu-ciaa-nxp */  
+#define RELAY_1   3  /* LED 1 */  
+#define RELAY_2   4  /* LED 2 */  
+#define RELAY_3   5  /* LED 3 */  
+#define RELAY_4   2  /* LED BLUE */  
 #endif
 /*==================[typedef]================================================*/
 
