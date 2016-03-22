@@ -65,7 +65,7 @@ TASK InitTask {
     RESOURCE = POSIXR;
 }
 
-TASK Analogic {
+TASK AnalogReads {
     PRIORITY = 1;
     ACTIVATION = 1;
     STACK = 512;
@@ -75,15 +75,37 @@ TASK Analogic {
     EVENT = POSIXE;
 }
 
-ALARM AnalogicAlarm {
+TASK AlarmsCheck {
+    PRIORITY = 2;
+    ACTIVATION = 1;
+    STACK = 512;
+    TYPE = EXTENDED;
+    SCHEDULE = NON;
+    RESOURCE = POSIXR;
+    EVENT = POSIXE;
+}
+
+ALARM AnalogReadsAlarm {
     COUNTER = SoftwareCounter;
     ACTION = ACTIVATETASK {
-        TASK = Analogic;
+        TASK = AnalogReads;
     }
     AUTOSTART = TRUE {
        APPMODE = AppMode1;
-       ALARMTIME = 1;
-       CYCLETIME = 500;
+       ALARMTIME = 5;
+       CYCLETIME = 10;
+    }
+}
+
+ALARM AlarmsCheckAlarm {
+    COUNTER = SoftwareCounter;
+    ACTION = ACTIVATETASK {
+        TASK = AlarmsCheck;
+    }
+    AUTOSTART = TRUE {
+       APPMODE = AppMode1;
+       ALARMTIME = 10;
+       CYCLETIME = 50;
     }
 }
 

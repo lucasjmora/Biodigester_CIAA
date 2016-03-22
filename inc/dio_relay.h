@@ -69,12 +69,12 @@ extern "C" {
 #define  ON    true
 #define  OFF   false
 #define  ERR   -1
-#if (ciaa_nxp == BOARD)
+#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
 #define RELAY_1   4 /* verificar */ 
 #define RELAY_2   5  
 #define RELAY_3   6  
 #define RELAY_4   7  
-#elif (edu_ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
+#elif (edu_ciaa_nxp == BOARD)
 /* edu_ciaa section */
 #define RELAY_1   3  /* LED 1 */  
 #define RELAY_2   4  /* LED 2 */  
