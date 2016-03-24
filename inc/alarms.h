@@ -45,8 +45,8 @@
  *
  */
 
-#ifndef DIO_RELAY_H
-#define DIO_RELAY_H
+#ifndef ALARMS_H
+#define ALARMS_H
 /** \brief Short description of this file
  **
  ** Long description of this file
@@ -59,44 +59,38 @@
  ** @{ */
 
 /*==================[inclusions]=============================================*/
-#include "ciaaPOSIX_stdio.h"
+#include "os.h" 
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*==================[macros]=================================================*/
-#define  ON    true
-#define  OFF   false
-#define  ERR   -1
-#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
-#define RELAY_1   4
-#define RELAY_2   5
-#define RELAY_3   6
-#define RELAY_4   7
-#elif (edu_ciaa_nxp == BOARD)/* edu_ciaa section */
-#define RELAY_1   3  /* LED 1 */
-#define RELAY_2   4  /* LED 2 */
-#define RELAY_3   5  /* LED 3 */
-#define RELAY_4   2  /* LED BLUE */
-#endif
+
 /*==================[typedef]================================================*/
+typedef struct {
+   int16_t limit;
+   bool high_low;             /* 0:low 1:high */
+   /*int16_t hysteresis;
+   int16_t delay;*/ 
+}alarmParamType;
+
+typedef bool (*setAction)(void *);
+typedef bool (*clearAction)(void *);
+
+typedef struct {
+   void * setArg;
+   void * clearArg;
+   setAction setAlarm;
+   clearAction clearAlarm;
+   alarmParamType * parameters;
+}alarmType;
 
 /*==================[external data declaration]==============================*/
 
 /*==================[external functions declaration]=========================*/
-/** \brief Adds 2 16 bits signed and return a 16 bits signed value
- **
- ** If the result is bigger than the limit in 15 bits returns
- ** INT16_MAX is lower than the limit in 15 bits returns
- ** INT16_MIN
- **
- ** \param[in]    a first parameter to be added
- ** \param[in]    b second parameter ot be added
- ** \return E_OK  returns addition of a+b
- **/
-extern int8_t ciaaDIO_relay_op(int32_t fildes_out, uint8_t relay_id, bool oper);
-extern int8_t ciaaDIO_relay_st(int32_t fildes_out, uint8_t realy_id);
+extern void alarmCheck(alarmType *, const uint16_t *);
+
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 }
@@ -104,5 +98,5 @@ extern int8_t ciaaDIO_relay_st(int32_t fildes_out, uint8_t realy_id);
 /** @} doxygen end group definition */
 /** @} doxygen end group definition */
 /*==================[end of file]============================================*/
-#endif /* #ifndef DIO_RELAY_H */
+#endif /* #ifndef ALARMS_H */
 

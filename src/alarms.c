@@ -45,8 +45,6 @@
  *
  */
 
-#ifndef DIO_RELAY_H
-#define DIO_RELAY_H
 /** \brief Short description of this file
  **
  ** Long description of this file
@@ -59,50 +57,49 @@
  ** @{ */
 
 /*==================[inclusions]=============================================*/
-#include "ciaaPOSIX_stdio.h"
-/*==================[cplusplus]==============================================*/
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "alarms.h"
+/*==================[macros and definitions]=================================*/
 
-/*==================[macros]=================================================*/
-#define  ON    true
-#define  OFF   false
-#define  ERR   -1
-#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
-#define RELAY_1   4
-#define RELAY_2   5
-#define RELAY_3   6
-#define RELAY_4   7
-#elif (edu_ciaa_nxp == BOARD)/* edu_ciaa section */
-#define RELAY_1   3  /* LED 1 */
-#define RELAY_2   4  /* LED 2 */
-#define RELAY_3   5  /* LED 3 */
-#define RELAY_4   2  /* LED BLUE */
-#endif
-/*==================[typedef]================================================*/
+/*==================[internal data declaration]==============================*/
 
-/*==================[external data declaration]==============================*/
+/*==================[internal functions declaration]=========================*/
 
-/*==================[external functions declaration]=========================*/
-/** \brief Adds 2 16 bits signed and return a 16 bits signed value
- **
- ** If the result is bigger than the limit in 15 bits returns
- ** INT16_MAX is lower than the limit in 15 bits returns
- ** INT16_MIN
- **
- ** \param[in]    a first parameter to be added
- ** \param[in]    b second parameter ot be added
- ** \return E_OK  returns addition of a+b
- **/
-extern int8_t ciaaDIO_relay_op(int32_t fildes_out, uint8_t relay_id, bool oper);
-extern int8_t ciaaDIO_relay_st(int32_t fildes_out, uint8_t realy_id);
-/*==================[cplusplus]==============================================*/
-#ifdef __cplusplus
+/*==================[internal data definition]===============================*/
+
+/*==================[external data definition]===============================*/
+
+/*==================[internal functions definition]==========================*/
+
+/*==================[external functions definition]==========================*/
+
+extern void alarmCheck(alarmType *alarm, const uint16_t *check_value)
+{
+  ciaaPOSIX_printf("check\n");
+   /* high alarm: check value over limit */
+   if (alarm->parameters->high_low == 1)
+   {
+      if (*check_value > alarm->parameters->limit)
+      {
+         alarm->setAlarm(alarm->setArg);
+      }
+      else
+         alarm->clearAlarm(alarm->clearArg);
+   }
+   /* low alarm: ckeck value under limit */
+   else if (alarm->parameters->high_low == 0)
+   {
+      if (*check_value < alarm->parameters->limit)
+      {
+         alarm->setAlarm(alarm->setArg);
+      }
+      else
+         alarm->clearAlarm(alarm->clearArg);
+   }
+// else
+// {
+//    ERROR
+// }
 }
-#endif
 /** @} doxygen end group definition */
 /** @} doxygen end group definition */
 /*==================[end of file]============================================*/
-#endif /* #ifndef DIO_RELAY_H */
-

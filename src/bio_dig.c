@@ -70,29 +70,66 @@
 #include "ciaak.h"            /* <= ciaa kernel header */
 #include "dio_relay.h"
 #include "bio_Cfg.h"
-
+#include "alarms.h"
 /*==================[macros and definitions]=================================*/
 
-//#define  HIGH_LIM_ANAI0    ANA3_HIGH_LIM_LEVEL
-//#define  LOW_LIM_ANAI0     ANA3_LOW_LIM_LEVEL  
-//#define  HIGH_LIM_ANAI0    800
-//#define  LOW_LIM_ANAI0   300 
-//#define  HIGH_ALARM_ANAI0    RELAY_1
-//#define  LOW_ALARM_ANAI0   RELAY_2
-
-typedef struct {
-   uint16_t channel_0;
-   uint16_t channel_1;
-   uint16_t channel_2;
-   uint16_t channel_3;
-}anaChReadValues;
+#define ANALOG_CHANNELS_QTY   4
+#define ALARMS_QTY   4
 
 /*==================[internal data declaration]==============================*/
 
+
 /*==================[internal functions declaration]=========================*/
 
+static bool anaChAlarmSetAction(void *);
+static bool anaChAlarmClearAction(void *);
 
 /*==================[internal data definition]===============================*/
+static uint8_t alarmArgActions[] = {
+   ANA2_HIGH_ALARM_RELAY,
+   ANA2_LOW_ALARM_RELAY,
+   ANA3_HIGH_ALARM_RELAY,
+   ANA3_LOW_ALARM_RELAY
+};
+
+static alarmParamType alarmParam[ALARMS_QTY] = {
+   {(uint16_t)ANA2_HIGH_LIM_LEVEL, 1},    /* alarm limit and set high alarm  */
+   {(uint16_t)ANA2_LOW_LIM_LEVEL, 0},     /* alarm limit and set low alarm  */
+   {(uint16_t)ANA3_HIGH_LIM_LEVEL, 1},    /* alarm limit and set high alarm  */
+   {(uint16_t)ANA3_LOW_LIM_LEVEL, 0}      /* alarm limit and set low alarm  */
+};
+
+static alarmType anaCh2_alarm_high = {
+   (void *)&alarmArgActions[0],
+   (void *)&alarmArgActions[0],
+   anaChAlarmSetAction,
+   anaChAlarmClearAction,  
+   &alarmParam[0]
+};
+
+static alarmType anaCh2_alarm_low = {
+   (void *)&alarmArgActions[1],
+   (void *)&alarmArgActions[1],
+   anaChAlarmSetAction,
+   anaChAlarmClearAction,  
+   &alarmParam[1]
+};
+
+static alarmType anaCh3_alarm_high = {
+   (void *)&alarmArgActions[2],
+   (void *)&alarmArgActions[2],
+   anaChAlarmSetAction,
+   anaChAlarmClearAction,  
+   &alarmParam[2]
+};
+
+static alarmType anaCh3_alarm_low = {
+   (void *)&alarmArgActions[3],
+   (void *)&alarmArgActions[3],
+   anaChAlarmSetAction,
+   anaChAlarmClearAction,  
+   &alarmParam[3]
+};
 
 /** \brief File descriptor for ADC
  *
@@ -106,16 +143,23 @@ static int32_t fd_adc;
  */
 static int32_t fd_out;
 
-uint16_t ana2_alarm_high_lim;
-uint16_t ana2_alarm_low_lim;
-uint16_t ana3_alarm_high_lim;
-uint16_t ana3_alarm_low_lim;
-
-anaChReadValues anaI_reads;
+static uint16_t anaChReadValues[ANALOG_CHANNELS_QTY];
 
 /*==================[external data definition]===============================*/
 
 /*==================[internal functions definition]==========================*/
+
+static bool anaChAlarmSetAction(void * relay)
+{
+  ciaaDIO_relay_op(fd_out, *((uint8_t *)relay), ON);
+  return 0; 
+}
+
+static bool anaChAlarmClearAction(void * relay)
+{
+  ciaaDIO_relay_op(fd_out, *((uint8_t *)relay), OFF);
+  return 0; 
+}
 
 /*==================[external functions definition]==========================*/
 /** \brief Main function
@@ -159,7 +203,9 @@ int main(void)
 void ErrorHook(void)
 {
    ciaaPOSIX_printf("ErrorHook was called\n");
-   ciaaPOSIX_printf("Service: %d, P1: %d, P2: %d, P3: %d, RET: %d\n", OSErrorGetServiceId(), OSErrorGetParam1(), OSErrorGetParam2(), OSErrorGetParam3(), OSErrorGetRet());
+   ciaaPOSIX_printf("Service: %d, P1: %d, P2: %d, P3: %d, RET: %d\n",
+               OSErrorGetServiceId(), OSErrorGetParam1(), OSErrorGetParam2(),
+               OSErrorGetParam3(), OSErrorGetRet());
    ShutdownOS(0);
 }
 
@@ -179,122 +225,36 @@ TASK(InitTask)
    fd_adc = ciaaPOSIX_open("/dev/serial/aio/in/0", ciaaPOSIX_O_RDONLY);
    ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, (void *)100000);
    
-   ana2_alarm_high_lim = (uint16_t)ANA2_HIGH_LIM_LEVEL;//800; 
-   ana2_alarm_low_lim = (uint16_t)ANA2_LOW_LIM_LEVEL;//300;
-   ana3_alarm_high_lim = (uint16_t)ANA3_HIGH_LIM_LEVEL;//800; 
-   ana3_alarm_low_lim = (uint16_t)ANA3_LOW_LIM_LEVEL;//300;
-
    /* end InitTask */
    TerminateTask();
 }
 
 TASK(AnalogReads)
 {
-#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
-   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, (void *)ciaaCHANNEL_0);
-   ciaaPOSIX_read(fd_adc, &anaI_reads.channel_0, sizeof(anaI_reads.channel_0));
-#elif (edu_ciaa_nxp == BOARD)
-   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, (void *)ciaaCHANNEL_1);
-   ciaaPOSIX_read(fd_adc, &anaI_reads.channel_1, sizeof(anaI_reads.channel_1));
-
-   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, (void *)ciaaCHANNEL_2);
-   ciaaPOSIX_read(fd_adc, &anaI_reads.channel_2, sizeof(anaI_reads.channel_2));
-
-   ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, (void *)ciaaCHANNEL_3);
-   ciaaPOSIX_read(fd_adc, &anaI_reads.channel_3, sizeof(anaI_reads.channel_3));
-#endif
+   uint8_t i;
+   #if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
+   for (i = ciaaCHANNEL_0; i < ANALOG_CHANNELS_QTY; i++)
+   #elif (edu_ciaa_nxp == BOARD)
+   for (i = ciaaCHANNEL_1; i < ANALOG_CHANNELS_QTY; i++)
+   #endif
+   {
+      ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_CHANNEL, (void *)i);
+      ciaaPOSIX_read(fd_adc, &anaChReadValues[i], sizeof(anaChReadValues[i]));
+   }
 
    TerminateTask();
 }
 
 TASK(AlarmsCheck)
 {
-   bool ana2_alarm_high_st;              /* high alarm status (1:ON 0:OFF) */
-   bool ana2_alarm_lower_st;             /* lower alarm status (1:ON 0:OFF) */
-   bool ana3_alarm_high_st;              /* high alarm status (1:ON 0:OFF) */
-   bool ana3_alarm_lower_st;             /* lower alarm status (1:ON 0:OFF) */
-
-/* Analog input channel 2 section */
-/*************************************/
-/* According to oneVar_twoAlarms.odg */
-/*************************************/
-
-   /* get alarms status*/
-   ana2_alarm_high_st = ciaaDIO_relay_st(fd_out, ANA2_HIGH_ALARM_RELAY);
-   ana2_alarm_lower_st = ciaaDIO_relay_st(fd_out, ANA2_LOW_ALARM_RELAY);
-
-   /* read value inside of allow range */
-   if (anaI_reads.channel_2 < ana3_alarm_high_lim && anaI_reads.channel_2 > ana2_alarm_low_lim)
-   {
-      /* clear alarms if it was ON */
-      if (ana2_alarm_lower_st || ana2_alarm_high_st)   
-      {
-         ciaaDIO_relay_op(fd_out, ANA2_HIGH_ALARM_RELAY, OFF);
-         ciaaDIO_relay_op(fd_out, ANA2_LOW_ALARM_RELAY, OFF);
-      }
-   }
-   /* read value over high limit */
-   else if (anaI_reads.channel_2 > ana2_alarm_high_lim)
-   {
-      if (!ana2_alarm_high_st)
-      {
-         ciaaDIO_relay_op(fd_out, ANA2_HIGH_ALARM_RELAY, ON);
-      }
-   }
-   /* read value under lower limit */
-   else if (anaI_reads.channel_2 < ana2_alarm_low_lim)
-   {
-      if (!ana2_alarm_lower_st)
-         ciaaDIO_relay_op(fd_out, ANA2_LOW_ALARM_RELAY, ON);
-   }
-  // else
-  // {
-      /* ERROR */
-  // }
-   
-/* Analog input channel 3 section */
-
-/*************************************/
-/* According to oneVar_twoAlarms.odg */
-/*************************************/
-
-   /* get alarms status*/
-   ana3_alarm_high_st = ciaaDIO_relay_st(fd_out, ANA3_HIGH_ALARM_RELAY);
-   ana3_alarm_lower_st = ciaaDIO_relay_st(fd_out, ANA3_LOW_ALARM_RELAY);
-
-   /* read value inside of allow range */
-   if (anaI_reads.channel_3 < ana3_alarm_high_lim && anaI_reads.channel_3 > ana3_alarm_low_lim)
-   {
-      /* clear alarms if it was ON */
-      if (ana3_alarm_lower_st || ana3_alarm_high_st)   
-      {
-         ciaaDIO_relay_op(fd_out, ANA3_HIGH_ALARM_RELAY, OFF);
-         ciaaDIO_relay_op(fd_out, ANA3_LOW_ALARM_RELAY, OFF);
-      }
-   }
-   /* read value over high limit */
-   else if (anaI_reads.channel_3 > ana3_alarm_high_lim)
-   {
-      if (!ana3_alarm_high_st)
-      {
-         ciaaDIO_relay_op(fd_out, ANA3_HIGH_ALARM_RELAY, ON);
-      }
-   }
-   /* read value under lower limit */
-   else if (anaI_reads.channel_3 < ana3_alarm_low_lim)
-   {
-      if (!ana3_alarm_lower_st)
-         ciaaDIO_relay_op(fd_out, ANA3_LOW_ALARM_RELAY, ON);
-   }
-  // else
-  // {
-      /* ERROR */
-  // }
+   alarmCheck(&anaCh2_alarm_high, &anaChReadValues[ciaaCHANNEL_2]);   
+   alarmCheck(&anaCh2_alarm_low, &anaChReadValues[ciaaCHANNEL_2]);   
+   alarmCheck(&anaCh3_alarm_high, &anaChReadValues[ciaaCHANNEL_3]);   
+   alarmCheck(&anaCh3_alarm_low, &anaChReadValues[ciaaCHANNEL_3]);   
    
    /* end of Blinking */
    TerminateTask();
 }
-
 
 /** @} doxygen end group definition */
 /** @} doxygen end group definition */
