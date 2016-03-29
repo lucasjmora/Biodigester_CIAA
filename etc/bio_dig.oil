@@ -63,6 +63,7 @@ TASK InitTask {
     TYPE = BASIC;
     SCHEDULE = NON;
     RESOURCE = POSIXR;
+    RESOURCE = MODBUSR;
 }
 
 TASK AnalogReads {
@@ -82,6 +83,7 @@ TASK AlarmsCheck {
     TYPE = EXTENDED;
     SCHEDULE = NON;
     RESOURCE = POSIXR;
+    RESOURCE = MODBUSR;
     EVENT = POSIXE;
 }
 
@@ -151,6 +153,7 @@ ISR DMA_IRQHandler {
 }
 
 RESOURCE = POSIXR;
+RESOURCE = MODBUSR;
 
 EVENT = POSIXE;
 

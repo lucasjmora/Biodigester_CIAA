@@ -50,5 +50,6 @@ MODS ?= modules$(DS)posix           \
         modules$(DS)ciaak           \
         modules$(DS)drivers         \
         modules$(DS)rtos            \
-        modules$(DS)libs
+        modules$(DS)libs				\
+		  modules$(DS)modbus
 

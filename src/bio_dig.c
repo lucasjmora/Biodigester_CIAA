@@ -67,24 +67,71 @@
 #include "ciaaPOSIX_stdio.h"
 #include "ciaaPOSIX_stdlib.h"
 #include "ciaaPOSIX_string.h" /* <= string header */
+#include "ciaaModbus.h"
 #include "ciaak.h"            /* <= ciaa kernel header */
+#include "bio_dig_modbus_slave.h"
 #include "dio_relay.h"
-#include "bio_Cfg.h"
 #include "alarms.h"
+#include "bio_Cfg.h"
 /*==================[macros and definitions]=================================*/
+#define MODBUS_ID    2
+
+#define MODBUS_ADDR_ANACH0    0X0000
+#define MODBUS_ADDR_ANACH1    0X0002
+#define MODBUS_ADDR_ANACH2    0X0004
+#define MODBUS_ADDR_ANACH3    0X0006
+
+#define MODBUS_ADDR_ANACH2_HIGH    0X0008
+#define MODBUS_ADDR_ANACH2_LOW    0X0009
+#define MODBUS_ADDR_ANACH3_HIGH    0X000A
+#define MODBUS_ADDR_ANACH3_LOW    0X000B
 
 #define ANALOG_CHANNELS_QTY   4
 #define ALARMS_QTY   4
 
+  
 /*==================[internal data declaration]==============================*/
 
 
 /*==================[internal functions declaration]=========================*/
+static uint8_t levelToPhysical (uint8_t ana_channel, const uint16_t *level_value, float *phy_val);
+static uint8_t modbus_floatToRegs(const float *var_value, uint16_t * modbus_regs);
+
+static uint16_t cmd0x04ReadInputReg(
+       uint16_t start,
+       uint16_t quantity,
+       uint8_t * exceptioncode,
+       uint8_t * buf
+       );
+
+static uint16_t cmd0x03ReadHoldingReg(
+       uint16_t start,
+       uint16_t quantity,
+       uint8_t * exceptioncode,
+       uint8_t * buf
+       );
 
 static bool anaChAlarmSetAction(void *);
 static bool anaChAlarmClearAction(void *);
 
 /*==================[internal data definition]===============================*/
+static int32_t hModbusSlave;
+static int32_t hModbusAscii;
+static int32_t hModbusGateway;
+
+static const ciaaModbus_slaveCmd_type callbacksStruct =
+{
+   NULL,
+   NULL,
+   cmd0x03ReadHoldingReg,
+   cmd0x04ReadInputReg,
+   NULL,
+   NULL,
+   NULL,
+   NULL,
+};
+
+
 static uint8_t alarmArgActions[] = {
    ANA2_HIGH_ALARM_RELAY,
    ANA2_LOW_ALARM_RELAY,
@@ -143,11 +190,215 @@ static int32_t fd_adc;
  */
 static int32_t fd_out;
 
+static int32_t fdSerialPort;
+
 static uint16_t anaChReadValues[ANALOG_CHANNELS_QTY];
 
 /*==================[external data definition]===============================*/
-
 /*==================[internal functions definition]==========================*/
+static uint8_t levelToPhysical (uint8_t ana_channel, const uint16_t *level_value, float *phy_val)
+{
+
+   switch (ana_channel)
+   {
+#if (ciaa_nxp == BOARD)             /* edu_ciaa_nxp do not have anai0 in use */
+      case 0:
+         *phy_val = ANA0_FACTOR * (*level_value) + ANA0_OFFSET;
+         break;
+#endif
+      case 1:
+         *phy_val = ANA1_FACTOR * (*level_value) + ANA1_OFFSET;
+         break;
+      case 2:
+         *phy_val = ANA2_FACTOR * (*level_value) + ANA2_OFFSET;
+         break;
+      case 3:
+         *phy_val = ANA3_FACTOR * (*level_value) + ANA3_OFFSET;
+         break;
+//      default:
+//         ERROR
+   }
+   return 0;
+}
+
+static uint8_t modbus_floatToRegs(const float *var_value,uint16_t * modbus_regs)
+{
+   union var_t{
+      float flt;
+      uint16_t regs[2];
+   }var;
+
+   var.flt = *var_value;
+   
+   *modbus_regs = var.regs[1];
+   *(modbus_regs + 1) = var.regs[0];
+
+   return 0;
+}
+
+static uint16_t cmd0x03ReadHoldingReg(
+       uint16_t start,
+       uint16_t quantity,
+       uint8_t * exceptioncode,
+       uint8_t * buf
+       )
+{
+   /* used to indicate quantity of registers processed */
+   int16_t quantityRegProcessed;
+/* used to indicate total of registers reads */
+   int8_t ret = 0;
+
+   /* loop to read all registers indicated */
+   do
+   {
+      /* select register address to be read */
+      switch (start)
+      {
+         /* read inputs of CIAA */
+         case MODBUS_ADDR_ANACH2_HIGH:
+            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA2_HIGH_ALARM_RELAY));
+            quantityRegProcessed = 1;
+            break;
+
+         /* read inputs of CIAA */
+         case MODBUS_ADDR_ANACH2_LOW:
+            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA2_LOW_ALARM_RELAY));
+            quantityRegProcessed = 1;
+            break;
+
+         /* read inputs of CIAA */
+         case MODBUS_ADDR_ANACH3_HIGH:
+            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_HIGH_ALARM_RELAY));
+            quantityRegProcessed = 1;
+            break;
+
+         /* read inputs of CIAA */
+         case MODBUS_ADDR_ANACH3_LOW:
+            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_LOW_ALARM_RELAY));
+            quantityRegProcessed = 1;
+            break;
+
+         /* wrong address */
+         default:
+            *exceptioncode = CIAA_MODBUS_E_WRONG_STR_ADDR;
+            quantityRegProcessed = -1;
+            break;
+      }
+
+      /* if quantityRegProcessed > 0, successful operation */
+      if (quantityRegProcessed > 0)
+      {
+         /* update buffer pointer to next register */
+         buf += (quantityRegProcessed*2);
+
+         /* next address to be read */
+         start += quantityRegProcessed;
+
+         /* increment count of registers */
+         ret += quantityRegProcessed;
+      }
+      else
+      {
+         /* an error occurred in reading */
+         ret = -1;
+      }
+      /* repeat until:
+      * - read total registers or
+      * - error occurs
+      */
+   }while ((ret > 0) && (ret < quantity));
+
+   return ret;
+}
+
+static uint16_t cmd0x04ReadInputReg(
+       uint16_t start,
+       uint16_t quantity,
+       uint8_t * exceptioncode,
+       uint8_t * buf
+       )
+{
+   /* used to indicate quantity of registers processed */
+   int16_t quantityRegProcessed;
+/* used to indicate total of registers reads */
+   int8_t ret = 0;
+   uint16_t regs[2];
+
+   //float test = 1;
+   float phy_value;
+   /* loop to read all registers indicated */
+   do
+   {
+      /* select register address to be read */
+      switch (start)
+      {
+#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)             /* edu_ciaa_nxp do not have anai0 in use */
+         /* read inputs of CIAA */
+         case MODBUS_ADDR_ANACH0:
+            levelToPhysical(0, &anaChReadValues[0], &phy_value);
+            modbus_floatToRegs(&phy_value, regs);
+            ciaaModbus_writeInt(buf, regs[0]);
+            ciaaModbus_writeInt(buf+2, regs[1]);
+            quantityRegProcessed = 2;
+            break;
+#endif
+         case MODBUS_ADDR_ANACH1:
+            levelToPhysical(1, &anaChReadValues[1], &phy_value);
+            modbus_floatToRegs(&phy_value, regs);
+            ciaaModbus_writeInt(buf, regs[0]);
+            ciaaModbus_writeInt(buf+2, regs[1]);
+            quantityRegProcessed = 2;
+            break;
+
+         case MODBUS_ADDR_ANACH2:
+            levelToPhysical(2, &anaChReadValues[2], &phy_value);
+            modbus_floatToRegs(&phy_value, regs);
+            ciaaModbus_writeInt(buf, regs[0]);
+            ciaaModbus_writeInt(buf+2, regs[1]);
+            quantityRegProcessed = 2;
+            break;
+
+         case MODBUS_ADDR_ANACH3:
+            levelToPhysical(3, &anaChReadValues[3], &phy_value);
+            //modbus_floatToRegs(&test, regs);
+            modbus_floatToRegs(&phy_value, regs);
+            ciaaModbus_writeInt(buf, regs[0]);
+            ciaaModbus_writeInt(buf+2, regs[1]);
+            quantityRegProcessed = 2;
+            break;
+
+         /* wrong address */
+         default:
+            *exceptioncode = CIAA_MODBUS_E_WRONG_STR_ADDR;
+            quantityRegProcessed = -1;
+            break;
+      }
+
+      /* if quantityRegProcessed > 0, successful operation */
+      if (quantityRegProcessed > 0)
+      {
+         /* update buffer pointer to next register */
+         buf += (quantityRegProcessed*2);
+
+         /* next address to be read */
+         start += quantityRegProcessed;
+
+         /* increment count of registers */
+         ret += quantityRegProcessed;
+      }
+      else
+      {
+         /* an error occurred in reading */
+         ret = -1;
+      }
+      /* repeat until:
+      * - read total registers or
+      * - error occurs
+      */
+   }while ((ret > 0) && (ret < quantity));
+
+   return ret;
+}
 
 static bool anaChAlarmSetAction(void * relay)
 {
@@ -215,6 +466,7 @@ void ErrorHook(void)
  */
 TASK(InitTask)
 {
+ciaaPOSIX_printf("InitTask\n");
    /* init the ciaa kernel */
    ciaak_start();
 
@@ -225,6 +477,37 @@ TASK(InitTask)
    fd_adc = ciaaPOSIX_open("/dev/serial/aio/in/0", ciaaPOSIX_O_RDONLY);
    ciaaPOSIX_ioctl(fd_adc, ciaaPOSIX_IOCTL_SET_SAMPLE_RATE, (void *)100000);
    
+   fdSerialPort = ciaaPOSIX_open("/dev/serial/uart/1", ciaaPOSIX_O_RDWR | ciaaPOSIX_O_NONBLOCK);
+
+   /* change baud rate for uart usb */
+   ciaaPOSIX_ioctl(fdSerialPort, ciaaPOSIX_IOCTL_SET_BAUDRATE, (void *)ciaaBAUDRATE_9600);
+
+   /* change FIFO TRIGGER LEVEL for uart usb */
+   ciaaPOSIX_ioctl(fdSerialPort, ciaaPOSIX_IOCTL_SET_FIFO_TRIGGER_LEVEL, (void *)ciaaFIFO_TRIGGER_LEVEL3);
+
+   /* Open Modbus Slave */
+   hModbusSlave = ciaaModbus_slaveOpen(
+         &callbacksStruct,
+         MODBUS_ID);
+
+   /* Open Transport Modbus Ascii */
+   hModbusAscii = ciaaModbus_transportOpen(
+         fdSerialPort,
+         CIAAMODBUS_TRANSPORT_MODE_ASCII_SLAVE);
+
+   /* Open Gateway Modbus */
+   hModbusGateway = ciaaModbus_gatewayOpen();
+
+   /* Add Modbus Slave to gateway */
+   ciaaModbus_gatewayAddSlave(
+         hModbusGateway,
+         hModbusSlave);
+
+   /* Add Modbus Transport to gateway */
+   ciaaModbus_gatewayAddTransport(
+         hModbusGateway,
+         hModbusAscii);
+
    /* end InitTask */
    TerminateTask();
 }
@@ -252,6 +535,7 @@ TASK(AlarmsCheck)
    alarmCheck(&anaCh3_alarm_high, &anaChReadValues[ciaaCHANNEL_3]);   
    alarmCheck(&anaCh3_alarm_low, &anaChReadValues[ciaaCHANNEL_3]);   
    
+   ciaaModbus_gatewayMainTask(hModbusGateway);
    /* end of Blinking */
    TerminateTask();
 }

@@ -1,19 +1,4 @@
-/* Copyright 2014, ACSE & CADIEEL
- *    ACSE   : http://www.sase.com.ar/asociacion-civil-sistemas-embebidos/ciaa/
- *    CADIEEL: http://www.cadieel.org.ar
- * All rights reserved.
- *
- *    or
- *
- * Copyright 2014, Your Name <youremail@domain.com>
- * All rights reserved.
- *
- *    or
- *
- * Copyright 2014, ACSE & CADIEEL & Your Name <youremail@domain.com
- *    ACSE   : http://www.sase.com.ar/asociacion-civil-sistemas-embebidos/ciaa/
- *    CADIEEL: http://www.cadieel.org.ar
- * All rights reserved.
+/* Copyright 2014, Gustavo Muro
  *
  * This file is part of CIAA Firmware.
  *
@@ -45,60 +30,76 @@
  *
  */
 
-/** \brief Short description of this file
+#ifndef _CIAAMODBUS_CONFIG_H_
+#define _CIAAMODBUS_CONFIG_H_
+/** \brief Modbus Config Header File
  **
- ** Long description of this file
+ ** This files shall be included by modules using the interfaces provided by
+ ** the Modbus
  **
  **/
 
 /** \addtogroup CIAA_Firmware CIAA Firmware
  ** @{ */
-/** \addtogroup Template Template to start a new module
+/** \addtogroup Modbus CIAA Modbus
  ** @{ */
 
+/*
+ * Initials     Name
+ * ---------------------------
+ * GMuro        Gustavo Muro
+ *
+ */
+
+/*
+ * modification history (new versions first)
+ * -----------------------------------------------------------
+ * 20141108 v0.0.1 GMuro   initial version
+ */
+
 /*==================[inclusions]=============================================*/
-#include "alarms.h"
-/*==================[macros and definitions]=================================*/
+#include "ciaaPOSIX_stdint.h"
 
-/*==================[internal data declaration]==============================*/
+/*==================[cplusplus]==============================================*/
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/*==================[internal functions declaration]=========================*/
+/*==================[macros]=================================================*/
 
-/*==================[internal data definition]===============================*/
+/** \brief Total gateway available */
+#define CIAA_MODBUS_TOTAL_GATEWAY            1
 
-/*==================[external data definition]===============================*/
+/** \brief Total masters available */
+#define CIAA_MODBUS_TOTAL_MASTERS            0
 
-/*==================[internal functions definition]==========================*/
+/** \brief Total slaves available */
+#define CIAA_MODBUS_TOTAL_SLAVES             1
 
-/*==================[external functions definition]==========================*/
+/** \brief Total transport available */
+#define CIAA_MODBUS_TOTAL_TRANSPORT_ASCII    1
 
-extern void alarmCheck(alarmType *alarm, const uint16_t *check_value)
-{
-   /* high alarm: check value over limit */
-   if (alarm->parameters->high_low == 1)
-   {
-      if (*check_value > alarm->parameters->limit)
-      {
-         alarm->setAlarm(alarm->setArg);
-      }
-      else
-         alarm->clearAlarm(alarm->clearArg);
-   }
-   /* low alarm: ckeck value under limit */
-   else if (alarm->parameters->high_low == 0)
-   {
-      if (*check_value < alarm->parameters->limit)
-      {
-         alarm->setAlarm(alarm->setArg);
-      }
-      else
-         alarm->clearAlarm(alarm->clearArg);
-   }
-// else
-// {
-//    ERROR
-// }
+/** \brief Total transport available */
+#define CIAA_MODBUS_TOTAL_TRANSPORT_RTU      0
+
+/** \brief Total transport available */
+#define CIAA_MODBUS_TOTAL_TRANSPORT_TCP      0
+
+/** \brief Time between calls (milliseconds) */
+#define CIAA_MODBUS_TIME_BASE                5
+
+/*==================[typedef]================================================*/
+
+/*==================[external data declaration]==============================*/
+
+/*==================[external functions declaration]=========================*/
+
+/*==================[cplusplus]==============================================*/
+#ifdef __cplusplus
 }
+#endif
 /** @} doxygen end group definition */
 /** @} doxygen end group definition */
 /*==================[end of file]============================================*/
+#endif /* #ifndef _CIAAMODBUS_CONFIG_H_ */
+
