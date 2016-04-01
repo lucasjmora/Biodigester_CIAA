@@ -75,10 +75,10 @@ extern "C" {
 #define RELAY_3   6
 #define RELAY_4   7
 #elif (edu_ciaa_nxp == BOARD)/* edu_ciaa section */
-#define RELAY_1   3  /* LED 1 */
-#define RELAY_2   4  /* LED 2 */
-#define RELAY_3   5  /* LED 3 */
-#define RELAY_4   2  /* LED BLUE */
+#define RELAY_1   2  /* LED BLUE */
+#define RELAY_2   3  /* LED 1 */
+#define RELAY_3   4  /* LED 2 */
+#define RELAY_4   5  /* LED 3 */
 #endif
 /*==================[typedef]================================================*/
 

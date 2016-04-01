@@ -81,15 +81,21 @@
 #define MODBUS_ADDR_ANACH2    0X0004
 #define MODBUS_ADDR_ANACH3    0X0006
 
-#define MODBUS_ADDR_ANACH2_HIGH    0X0008
-#define MODBUS_ADDR_ANACH2_LOW    0X0009
-#define MODBUS_ADDR_ANACH3_HIGH    0X000A
-#define MODBUS_ADDR_ANACH3_LOW    0X000B
+#define MODBUS_ADDR_ALARMS    0X0010
+//#define MODBUS_ADDR_ANACH2_HIGH    0X0008
+//#define MODBUS_ADDR_ANACH2_LOW    0X0009
+//#define MODBUS_ADDR_ANACH3_HIGH    0X000A
+//#define MODBUS_ADDR_ANACH3_LOW    0X000B
 
 #define ANALOG_CHANNELS_QTY   4
 #define ALARMS_QTY   4
 
-  
+//#define MSB2LSB(b)   do {  \
+//                     b = (((b)&1?128:0)|((b)&2?64:0)|((b)&4?32:0)|((b)&8?16:0)|((b)&16?8:0)|((b)&32?4:0)|((b)&64?2:0)|((b)&128?1:0));             \
+//                     }while (0) 
+#define NIBBLE_SWAP(b)  do {  \
+                        b = ((b<<4) | (b>>4)); \
+                        }while (0)
 /*==================[internal data declaration]==============================*/
 
 
@@ -104,7 +110,13 @@ static uint16_t cmd0x04ReadInputReg(
        uint8_t * buf
        );
 
-static uint16_t cmd0x03ReadHoldingReg(
+//static uint16_t cmd0x03ReadHoldingReg(
+//       uint16_t start,
+//       uint16_t quantity,
+//       uint8_t * exceptioncode,
+//       uint8_t * buf
+//       );
+static uint16_t cmd0x01ReadCoils(
        uint16_t start,
        uint16_t quantity,
        uint8_t * exceptioncode,
@@ -121,9 +133,9 @@ static int32_t hModbusGateway;
 
 static const ciaaModbus_slaveCmd_type callbacksStruct =
 {
+   cmd0x01ReadCoils,
    NULL,
-   NULL,
-   cmd0x03ReadHoldingReg,
+   NULL,//cmd0x03ReadHoldingReg,
    cmd0x04ReadInputReg,
    NULL,
    NULL,
@@ -235,8 +247,82 @@ static uint8_t modbus_floatToRegs(const float *var_value,uint16_t * modbus_regs)
 
    return 0;
 }
+//static uint16_t cmd0x03ReadHoldingReg(
+//       uint16_t start,
+//       uint16_t quantity,
+//       uint8_t * exceptioncode,
+//       uint8_t * buf
+//       )
+//{
+//   /* used to indicate quantity of registers processed */
+//   int16_t quantityRegProcessed;
+///* used to indicate total of registers reads */
+//   int8_t ret = 0;
+//
+//   /* loop to read all registers indicated */
+//   do
+//   {
+//      /* select register address to be read */
+//      switch (start)
+//      {
+//         /* read inputs of CIAA */
+//         case MODBUS_ADDR_ANACH2_HIGH:
+//            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA2_HIGH_ALARM_RELAY));
+//            quantityRegProcessed = 1;
+//            break;
+//
+//         /* read inputs of CIAA */
+//         case MODBUS_ADDR_ANACH2_LOW:
+//            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA2_LOW_ALARM_RELAY));
+//            quantityRegProcessed = 1;
+//            break;
+//
+//         /* read inputs of CIAA */
+//         case MODBUS_ADDR_ANACH3_HIGH:
+//            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_HIGH_ALARM_RELAY));
+//            quantityRegProcessed = 1;
+//            break;
+//
+//         /* read inputs of CIAA */
+//         case MODBUS_ADDR_ANACH3_LOW:
+//            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_LOW_ALARM_RELAY));
+//            quantityRegProcessed = 1;
+//            break;
+//
+//         /* wrong address */
+//         default:
+//            *exceptioncode = CIAA_MODBUS_E_WRONG_STR_ADDR;
+//            quantityRegProcessed = -1;
+//            break;
+//      }
+//
+//      /* if quantityRegProcessed > 0, successful operation */
+//      if (quantityRegProcessed > 0)
+//      {
+//         /* update buffer pointer to next register */
+//         buf += (quantityRegProcessed*2);
+//
+//         /* next address to be read */
+//         start += quantityRegProcessed;
+//
+//         /* increment count of registers */
+//         ret += quantityRegProcessed;
+//      }
+//      else
+//      {
+//         /* an error occurred in reading */
+//         ret = -1;
+//      }
+//      /* repeat until:
+//      * - read total registers or
+//      * - error occurs
+//      */
+//   }while ((ret > 0) && (ret < quantity));
+//
+//   return ret;
+//}
 
-static uint16_t cmd0x03ReadHoldingReg(
+static uint16_t cmd0x01ReadCoils(
        uint16_t start,
        uint16_t quantity,
        uint8_t * exceptioncode,
@@ -247,36 +333,64 @@ static uint16_t cmd0x03ReadHoldingReg(
    int16_t quantityRegProcessed;
 /* used to indicate total of registers reads */
    int8_t ret = 0;
-
+   
+   uint8_t coils_reg = 0;
+   ciaaPOSIX_read(fd_out, &coils_reg, 1);
+#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)             /* edu_ciaa_nxp do not have anai0 in use */
+   NIBBLE_SWAP(coils_reg);
+#elif (edu_ciaa_nxp == BOARD)
+   coils_reg >>= 2;
+#endif
+   //MSB2LSB(coils_reg);
    /* loop to read all registers indicated */
-   do
-   {
+  // do
+  // {
       /* select register address to be read */
       switch (start)
       {
          /* read inputs of CIAA */
-         case MODBUS_ADDR_ANACH2_HIGH:
-            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA2_HIGH_ALARM_RELAY));
+         case MODBUS_ADDR_ALARMS:
+            switch (quantity)
+            {
+               case 1:
+                  buf[0] = coils_reg & 1;
+                  break;
+               case 2:
+                  buf[0] = coils_reg & 3;
+                  break;
+               case 3:
+                  buf[0] = coils_reg & 7;
+                  break;
+               case 4:   
+                  buf[0] = coils_reg & 15;
+                  break;
+               //case 8:   
+               default:
+                  buf[0] = coils_reg;
+                  break;
+            }
+            //ciaaModbus_writeInt(buf, coils_reg);
+//            buf[0] = coils_reg;
             quantityRegProcessed = 1;
             break;
 
-         /* read inputs of CIAA */
-         case MODBUS_ADDR_ANACH2_LOW:
-            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA2_LOW_ALARM_RELAY));
-            quantityRegProcessed = 1;
-            break;
-
-         /* read inputs of CIAA */
-         case MODBUS_ADDR_ANACH3_HIGH:
-            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_HIGH_ALARM_RELAY));
-            quantityRegProcessed = 1;
-            break;
-
-         /* read inputs of CIAA */
-         case MODBUS_ADDR_ANACH3_LOW:
-            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_LOW_ALARM_RELAY));
-            quantityRegProcessed = 1;
-            break;
+//         /* read inputs of CIAA */
+//         case MODBUS_ADDR_ANACH2_LOW:
+//            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA2_LOW_ALARM_RELAY));
+//            quantityRegProcessed = 1;
+//            break;
+//
+//         /* read inputs of CIAA */
+//         case MODBUS_ADDR_ANACH3_HIGH:
+//            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_HIGH_ALARM_RELAY));
+//            quantityRegProcessed = 1;
+//            break;
+//
+//         /* read inputs of CIAA */
+//         case MODBUS_ADDR_ANACH3_LOW:
+//            ciaaModbus_writeInt(buf, ciaaDIO_relay_st(fd_out, ANA3_LOW_ALARM_RELAY));
+//            quantityRegProcessed = 1;
+//            break;
 
          /* wrong address */
          default:
@@ -306,8 +420,9 @@ static uint16_t cmd0x03ReadHoldingReg(
       * - read total registers or
       * - error occurs
       */
-   }while ((ret > 0) && (ret < quantity));
+  // }while ((ret > 0) && (ret < quantity));
 
+   ret = quantity;//ret * 16;
    return ret;
 }
 
@@ -466,7 +581,9 @@ void ErrorHook(void)
  */
 TASK(InitTask)
 {
-ciaaPOSIX_printf("InitTask\n");
+//   uint8_t test = 15;
+//   NIBBLE_SWAP(test);
+//   ciaaPOSIX_printf("InitTask: %u\n", test);
    /* init the ciaa kernel */
    ciaak_start();
 

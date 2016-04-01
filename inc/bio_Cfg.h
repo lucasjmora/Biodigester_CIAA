@@ -91,12 +91,12 @@ extern "C" {
 #define ANA1_PHYSICAL_MAGNITUDE_MIN    -10 
 
 #define ANA2_INPUT_RANGE_A 
-#define ANA2_PHYSICAL_MAGNITUDE        "temperature"
+#define ANA2_PHYSICAL_MAGNITUDE        "pH"
 #define ANA2_PHYSICAL_MAGNITUDE_UNIT   "degree_celsius"
-#define ANA2_PHYSICAL_MAGNITUDE_MAX    150 
-#define ANA2_PHYSICAL_MAGNITUDE_MIN    -10 
-#define ANA2_HIGH_ALARM_LIM            100 
-#define ANA2_LOW_ALARM_LIM             10 
+#define ANA2_PHYSICAL_MAGNITUDE_MAX    14 
+#define ANA2_PHYSICAL_MAGNITUDE_MIN    0 
+#define ANA2_HIGH_ALARM_LIM            12 
+#define ANA2_LOW_ALARM_LIM             3 
 #define ANA2_HIGH_ALARM_RELAY          RELAY_1
 #define ANA2_LOW_ALARM_RELAY           RELAY_2
 
