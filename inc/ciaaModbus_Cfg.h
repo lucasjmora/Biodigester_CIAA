@@ -32,30 +32,6 @@
 
 #ifndef _CIAAMODBUS_CONFIG_H_
 #define _CIAAMODBUS_CONFIG_H_
-/** \brief Modbus Config Header File
- **
- ** This files shall be included by modules using the interfaces provided by
- ** the Modbus
- **
- **/
-
-/** \addtogroup CIAA_Firmware CIAA Firmware
- ** @{ */
-/** \addtogroup Modbus CIAA Modbus
- ** @{ */
-
-/*
- * Initials     Name
- * ---------------------------
- * GMuro        Gustavo Muro
- *
- */
-
-/*
- * modification history (new versions first)
- * -----------------------------------------------------------
- * 20141108 v0.0.1 GMuro   initial version
- */
 
 /*==================[inclusions]=============================================*/
 #include "ciaaPOSIX_stdint.h"
@@ -98,8 +74,6 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
 /*==================[end of file]============================================*/
 #endif /* #ifndef _CIAAMODBUS_CONFIG_H_ */
 

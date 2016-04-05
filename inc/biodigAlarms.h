@@ -45,64 +45,59 @@
  *
  */
 
-#ifndef DIO_RELAY_H
-#define DIO_RELAY_H
-/** \brief Short description of this file
- **
- ** Long description of this file
- **
- **/
-
-/** \addtogroup CIAA_Firmware CIAA Firmware
- ** @{ */
-/** \addtogroup Template Template to start a new module
- ** @{ */
+#ifndef BIODIGALARMS_H
+#define BIODIGALARMS_H
+/** \brief Alarm object */
 
 /*==================[inclusions]=============================================*/
-#include "ciaaPOSIX_stdio.h"
+#include "os.h" 
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*==================[macros]=================================================*/
-#define  ON    true
-#define  OFF   false
-#define  ERR   -1
-#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
-#define RELAY_1   4
-#define RELAY_2   5
-#define RELAY_3   6
-#define RELAY_4   7
-#elif (edu_ciaa_nxp == BOARD)/* edu_ciaa section */
-#define RELAY_1   2  /* LED BLUE */
-#define RELAY_2   3  /* LED 1 */
-#define RELAY_3   4  /* LED 2 */
-#define RELAY_4   5  /* LED 3 */
-#endif
+
 /*==================[typedef]================================================*/
+/** \brief Alarm object parameters type(data members) */
+typedef struct {
+   int16_t limit;    /** <= value which alarm must be trigger*/
+   bool high_low;    /** <= when trigger: over(1) or under(0) limit */
+   /*int16_t hysteresis; <= wait for set/clear in units 
+   int16_t delay;        <= wait for set/clear in time */ 
+}alarmParamType;
+
+/** \brief callback for set alarm type */
+typedef bool (*setAction)(void *);
+
+/** \brief callback for clear alarm type */
+typedef bool (*clearAction)(void *);
+
+/** \brief Alarm object type */
+typedef struct {
+   void * setArg;               /** <= arguments for set callback */
+   void * clearArg;             /** <= arguments for clear callback */
+   setAction setAlarm;          /** <= callback to execute when alarm is set */
+   clearAction clearAlarm;      /** <= callback to execute when alarm is
+                                       clear */
+   alarmParamType * parameters; /** <= alarm's parameters */
+}alarmType;
 
 /*==================[external data declaration]==============================*/
 
 /*==================[external functions declaration]=========================*/
-/** \brief Adds 2 16 bits signed and return a 16 bits signed value
+/** \brief Perform alarm check 
  **
- ** If the result is bigger than the limit in 15 bits returns
- ** INT16_MAX is lower than the limit in 15 bits returns
- ** INT16_MIN
- **
- ** \param[in]    a first parameter to be added
- ** \param[in]    b second parameter ot be added
- ** \return E_OK  returns addition of a+b
+ ** \param[in]    alarm alarm to be check    
+ ** \param[in]    check_value value to be control
+ ** \return 1 if success -1 if an error occurs
  **/
-extern int8_t ciaaDIO_relay_op(int32_t fildes_out, uint8_t relay_id, bool oper);
-extern int8_t ciaaDIO_relay_st(int32_t fildes_out, uint8_t realy_id);
+extern int8_t alarmCheck(alarmType * alarm, const uint16_t * check_value);
+
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 }
 #endif
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
 /*==================[end of file]============================================*/
-#endif /* #ifndef DIO_RELAY_H */
+#endif /* #ifndef ALARMS_H */
 

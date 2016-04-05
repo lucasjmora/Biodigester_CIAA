@@ -45,37 +45,29 @@
  *
  */
 
-#ifndef BIO_CFG_H
-#define BIO_CFG_H
-/** \brief Short description of this file
- **
- ** Long description of this file
- **
- **/
-
-/** \addtogroup CIAA_Firmware CIAA Firmware
- ** @{ */
-/** \addtogroup Template Template to start a new module
- ** @{ */
+#ifndef BIODIG_CFG_H
+#define BIODIG_CFG_H
+/** \brief General configurations and perform scaled of values */
 
 /*==================[inclusions]=============================================*/
-#include "dio_relay.h"
+#include "biodigRelays.h"
+
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*==================[macros]=================================================*/
-
-/*-------------------------User setting section------------------------------*/
-/* 
- * Select analog input range:
- * ANA0_INPUT_RANGE_A: 0..10V or 0..20mA or edu_ciaa(0..3.3V) 
- * ANA0_INPUT_RANGE_B: 4..20mA  
- * 
- * Note: Only analog channels 2 and 3 have high and low alarms(relays).
- * (TODO: check max and min lim inside of range)
- */
+/** \brief User setting section
+ **
+ ** User must be enter the requested parameters for each analog channel
+ ** 
+ ** \remarks Select analog input range:
+ **          ANAn_INPUT_RANGE_A: 0..10V or 0..20mA or edu_ciaa(0..3.3V) 
+ **          ANAn_INPUT_RANGE_B: 4..20mA  
+ **  Only analog channels 2 and 3 have high and low alarms(relays).
+ ** (TODO: check max and min lim inside of range)
+ **/
 #if (ciaa_nxp == BOARD)             /* edu_ciaa_nxp do not have anai0 in use */
 #define ANA0_INPUT_RANGE_A 
 #define ANA0_PHYSICAL_MAGNITUDE        "temperature"
@@ -111,7 +103,7 @@ extern "C" {
 #define ANA3_LOW_ALARM_RELAY           RELAY_4
 
 /*-------------------------User setting section end -------------------------*/
-
+/** \brief electrical analog input range mapped on analog level range */
 #if (ciaa_nxp == BOARD)             /* edu_ciaa_nxp do not have anai0 in use */
 #ifdef ANA0_INPUT_RANGE_A
 #define ANA0_LEVEL_MAX    1023
@@ -146,14 +138,14 @@ extern "C" {
 #define ANA3_LEVEL_MIN    205   
 #endif
 
-/*
- * see doc ??????
- * READ MAGNITUDE VALUE = ANA_FACTOR * (anaI level read value) + ANA_OFFSET
- *
- * Note: Use ANAx_FACTOR and ANAx_OFFSET carefull to avoid extra compute.
- *       TIP: Call they only once, maybe in a init task and assig resault to a
- *       const variable. 
- */
+/** \brief Scaled analog read values
+ ** 
+ ** READ MAGNITUDE VALUE = ANA_FACTOR * (anaI level read value) + ANA_OFFSET
+ **
+ ** \remarks   Use ANAx_FACTOR and ANAx_OFFSET carefull to avoid extra compute.
+ **            TIP: Call they only once, maybe in a init task and assig result
+ **            to a const variable. 
+ **/
 #if (ciaa_nxp == BOARD)             /* edu_ciaa_nxp do not have anai0 in use */
 #define ANA0_FACTOR \
    ((float)ANA0_PHYSICAL_MAGNITUDE_MAX - (float)ANA0_PHYSICAL_MAGNITUDE_MIN) /\
@@ -192,12 +184,11 @@ extern "C" {
    ((float)ANA3_PHYSICAL_MAGNITUDE_MAX - (float)ANA3_PHYSICAL_MAGNITUDE_MIN))/\
    (float)(ANA3_LEVEL_MAX - ANA3_LEVEL_MIN))
 
-/* 
- * Alarm limit from magnitude values to adc levels values convertion
- *
- * READ MAGNITUDE VALUE = ANA_FACTOR * (anaI level read value) + ANA_OFFSET 
- * ==> ANAx_HIGH_LIM_LEVEL = (ANAx_HIGH_ALARM_LIM - ANAx_OFFSET) / ANAx_FACTOR
- */
+/**Alarm limit from magnitude values to adc levels values convertion
+ **
+ ** READ MAGNITUDE VALUE = ANA_FACTOR * (anaI level read value) + ANA_OFFSET 
+ ** ==> ANAx_HIGH_LIM_LEVEL = (ANAx_HIGH_ALARM_LIM - ANAx_OFFSET) / ANAx_FACTOR
+ **/
 #define ANA2_HIGH_LIM_LEVEL   ((float)ANA2_HIGH_ALARM_LIM - ANA2_OFFSET) / \
                               (ANA2_FACTOR)
 
@@ -210,18 +201,17 @@ extern "C" {
 #define ANA3_LOW_LIM_LEVEL    ((float)ANA3_LOW_ALARM_LIM - ANA3_OFFSET) / \
                               (ANA3_FACTOR)
 
-
 /*==================[typedef]================================================*/
 
 /*==================[external data declaration]==============================*/
 
 /*==================[external functions declaration]=========================*/
+
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 }
 #endif
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
+
 /*==================[end of file]============================================*/
-#endif /* #ifndef BIO_CFG_H */
+#endif /* #ifndef BIODIG_CFG_H */
 

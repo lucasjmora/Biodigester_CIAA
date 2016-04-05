@@ -33,32 +33,8 @@
  *
  */
 
-#ifndef _BIO_DIG_H_
-#define _BIO_DIG_H_
-/** \brief Blinking ADC & DAC example header file
- **
- ** This is a mini example of the CIAA Firmware
- **
- **/
-
-/** \addtogroup CIAA_Firmware CIAA Firmware
- ** @{ */
-/** \addtogroup Examples CIAA Firmware Examples
- ** @{ */
-/** \addtogroup ADC DAC ADC & DAC example header file
- ** @{ */
-
-/*
- * Initials     Name
- * ---------------------------
- *
- */
-
-/*
- * modification history (new versions first)
- * -----------------------------------------------------------
- * yyyymmdd v0.0.1 initials initial version
- */
+#ifndef BIO_DIG_H
+#define BIO_DIG_H
 
 /*==================[inclusions]=============================================*/
 
@@ -70,9 +46,6 @@
 
 /*==================[external functions declaration]=========================*/
 
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
 /*==================[end of file]============================================*/
-#endif /* #ifndef _BIO_DIG_H_ */
+#endif /* #ifndef BIO_DIG_H */
 

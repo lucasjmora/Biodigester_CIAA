@@ -33,7 +33,7 @@
 /* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.              */
 /*                                                                           */
 /*****************************************************************************/
-/*  ADC & DAC example OIL configuration file                                 */
+/*  Biodigestor project OIL configuration file                               */
 /*                                                                           */
 /*  This file describes the current OSEK configuration.                      */
 /*  References:                                                              */
@@ -140,17 +140,6 @@ ISR UART3_IRQHandler {
    CATEGORY = 2;
    PRIORITY = 0;
 };
-
-/*
-*See DMA_IRQ in file:
-*.../cortexM4/lpc43xx/lpc4337/src/ciaaDriverAio.c:ISR(DMA_IRQHandler)
-*/
-
-ISR DMA_IRQHandler {
-    INTERRUPT = DMA;
-    CATEGORY = 2;
-    PRIORITY = 0;
-}
 
 RESOURCE = POSIXR;
 RESOURCE = MODBUSR;

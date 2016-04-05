@@ -45,27 +45,16 @@
  *
  */
 
-/** \brief Short description of this file
- **
- ** Long description of this file
- **
- **/
-
-/** \addtogroup CIAA_Firmware CIAA Firmware
- ** @{ */
-/** \addtogroup Template Template to start a new module
- ** @{ */
-
 /*==================[inclusions]=============================================*/
 #include "os.h"
 #include "ciaaPOSIX_stdio.h"
-#include "dio_relay.h"
+#include "biodigRelays.h"
+
 /*==================[macros and definitions]=================================*/
 
 /*==================[internal data declaration]==============================*/
 
 /*==================[internal functions declaration]=========================*/
-
 static uint8_t OutputPinStatus(int32_t fildes_out,uint8_t pin_to_test);
 static void OutpuPinClear(int32_t fildes_out,uint8_t pin_to_clear);
 static void OutpuPinSet(int32_t fildes_out,uint8_t pin_to_set);
@@ -75,12 +64,11 @@ static void OutpuPinSet(int32_t fildes_out,uint8_t pin_to_set);
 /*==================[external data definition]===============================*/
 
 /*==================[internal functions definition]==========================*/
-
 static uint8_t OutputPinStatus(int32_t fildes_out,uint8_t pin_to_test)
 {
    /* TODO: implement pin_to_test 0...7 validation check */
    uint8_t one_in_pin = 1;
-   uint8_t output_port_status;
+   uint8_t output_port_status = 0;
    
    one_in_pin <<= pin_to_test;
    ciaaPOSIX_read(fildes_out, &output_port_status, 1);
@@ -92,7 +80,7 @@ static void OutpuPinClear(int32_t fildes_out,uint8_t pin_to_clear)
 {
    /* TODO: implement pin_to_test 0...7 validation check */
    uint8_t one_in_pin = 1;
-   uint8_t output_port;
+   uint8_t output_port = 0;
    
    one_in_pin <<= pin_to_clear;
    ciaaPOSIX_read(fildes_out, &output_port, 1);
@@ -104,7 +92,7 @@ static void OutpuPinSet(int32_t fildes_out,uint8_t pin_to_set)
 {
    /* TODO: implement pin_to_test 0...7 validation check */
    uint8_t one_in_pin = 1;
-   uint8_t output_port;
+   uint8_t output_port = 0;
    
    one_in_pin <<= pin_to_set;
    ciaaPOSIX_read(fildes_out, &output_port, 1);
@@ -113,7 +101,7 @@ static void OutpuPinSet(int32_t fildes_out,uint8_t pin_to_set)
 }
 
 /*==================[external functions definition]==========================*/
-int8_t ciaaDIO_relay_op(int32_t fildes_out, uint8_t relay_id, bool oper)
+int8_t biodigRelays_operate(int32_t fildes_out, uint8_t relay_id, bool oper)
 {
    int8_t ret = 0;
    /* check relay_id between RELAY_1 and RELAY_4 */
@@ -134,7 +122,7 @@ int8_t ciaaDIO_relay_op(int32_t fildes_out, uint8_t relay_id, bool oper)
    return ret; 
 }
 
-int8_t ciaaDIO_relay_st(int32_t fildes_out, uint8_t relay_id)
+int8_t biodigRelays_getStatus(int32_t fildes_out, uint8_t relay_id)
 {
    /* check relay_id between RELAY_1 and RELAY_4 */
    int8_t ret = 0;
@@ -153,6 +141,5 @@ int8_t ciaaDIO_relay_st(int32_t fildes_out, uint8_t relay_id)
    
    return ret;
 }
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
+
 /*==================[end of file]============================================*/

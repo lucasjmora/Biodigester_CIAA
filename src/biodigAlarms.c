@@ -51,13 +51,8 @@
  **
  **/
 
-/** \addtogroup CIAA_Firmware CIAA Firmware
- ** @{ */
-/** \addtogroup Template Template to start a new module
- ** @{ */
-
 /*==================[inclusions]=============================================*/
-#include "alarms.h"
+#include "biodigAlarms.h"
 /*==================[macros and definitions]=================================*/
 
 /*==================[internal data declaration]==============================*/
@@ -72,7 +67,7 @@
 
 /*==================[external functions definition]==========================*/
 
-extern void alarmCheck(alarmType *alarm, const uint16_t *check_value)
+extern int8_t alarmCheck(alarmType *alarm, const uint16_t *check_value)
 {
    /* high alarm: check value over limit */
    if (alarm->parameters->high_low == 1)
@@ -98,7 +93,6 @@ extern void alarmCheck(alarmType *alarm, const uint16_t *check_value)
 // {
 //    ERROR
 // }
+   return 1;
 }
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
 /*==================[end of file]============================================*/

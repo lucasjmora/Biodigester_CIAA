@@ -45,58 +45,81 @@
  *
  */
 
-#ifndef ALARMS_H
-#define ALARMS_H
-/** \brief Short description of this file
+#ifndef BIODIGRELAYS_H
+#define BIODIGRELAYS_H
+/** \brief Relays commands
  **
- ** Long description of this file
- **
+ ** API for relays operations (and mapping CIAA-NXP relays on leds for 
+ ** edu-ciaa-nxp). 
  **/
 
-/** \addtogroup CIAA_Firmware CIAA Firmware
- ** @{ */
-/** \addtogroup Template Template to start a new module
- ** @{ */
-
 /*==================[inclusions]=============================================*/
-#include "os.h" 
+#include "ciaaPOSIX_stdio.h"
+
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*==================[macros]=================================================*/
+/** \brief ON/OFF are operation actions on relays and ERR is used for errors */
+#define  ON    true
+#define  OFF   false
+#define  ERR   -1
+
+/** \brief Relays id
+ *
+ ** Relays mapped on output port bits 
+ **/
+#if (ciaa_nxp == BOARD || ciaa_sim_ia64 == BOARD)
+#define RELAY_1   4
+#define RELAY_2   5
+#define RELAY_3   6
+#define RELAY_4   7
+
+/** \brief Leds are use in place of relays on edu-ciaa-nxp
+ **
+ ** \remarks   If you build for edu-ciaa-nxp (BOARD = edu_ciaa_nxp) follow
+ **            relays to leds map are implemented:
+ **            RELAY_1 --> LED BLUE
+ **            RELAY_2 --> LED 1
+ **            RELAY_3 --> LED 2
+ **            RELAY_4 --> LED 3
+ **/
+#elif (edu_ciaa_nxp == BOARD)
+#define RELAY_1   2  /* LED BLUE */
+#define RELAY_2   3  /* LED 1 */
+#define RELAY_3   4  /* LED 2 */
+#define RELAY_4   5  /* LED 3 */
+#endif
 
 /*==================[typedef]================================================*/
-typedef struct {
-   int16_t limit;
-   bool high_low;             /* 0:low 1:high */
-   /*int16_t hysteresis;
-   int16_t delay;*/ 
-}alarmParamType;
-
-typedef bool (*setAction)(void *);
-typedef bool (*clearAction)(void *);
-
-typedef struct {
-   void * setArg;
-   void * clearArg;
-   setAction setAlarm;
-   clearAction clearAlarm;
-   alarmParamType * parameters;
-}alarmType;
 
 /*==================[external data declaration]==============================*/
 
 /*==================[external functions declaration]=========================*/
-extern void alarmCheck(alarmType *, const uint16_t *);
+/** \brief Activate or deactivate a relay.
+ **
+ ** \param[in]    fildes_out output port's file descriptor 
+ ** \param[in]    relay_id relay's id to operate 
+ ** \param[in]    oper action to perform over relay(ON/OFF) 
+ ** \return 1 if success -1 if an error occurs
+ **/
+extern int8_t biodigRelays_operate(int32_t fildes_out, uint8_t relay_id, bool oper);
+
+/** \brief Get current relay state 
+ **
+ ** \param[in]    fildes_out output port's file descriptor 
+ ** \param[in]    relay_id relay's id to operate 
+ ** \return status of relay_id(1: ON / 0: OFF) -1 if an error occurs
+ **/
+extern int8_t biodigRelays_getStatus(int32_t fildes_out, uint8_t relay_id);
 
 /*==================[cplusplus]==============================================*/
 #ifdef __cplusplus
 }
 #endif
-/** @} doxygen end group definition */
-/** @} doxygen end group definition */
+
 /*==================[end of file]============================================*/
-#endif /* #ifndef ALARMS_H */
+#endif /* #ifndef BIODIGRELAYS_H */
 
