@@ -220,7 +220,8 @@ uint16_t cmd0x04ReadInputReg(
                                                             use */
          case MODBUS_ADDR_ANACH0:
             levelToPhysical(0, &anaChReadValues[0], &phy_value);
-            modbus_floatToRegs(&phy_value, regs);
+          //  modbus_floatToRegs(&phy_value, regs);
+            floatToWords(&phy_value, regs);
             ciaaModbus_writeInt(buf, regs[0]);
             ciaaModbus_writeInt(buf+2, regs[1]);
             quantityRegProcessed = 2;
